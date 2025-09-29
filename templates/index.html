@@ -1,0 +1,202 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Speech-to-SQL (AI + RAG)</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { background:#fff; font-family: Arial, sans-serif; margin:0; padding:0; color:#222; }
+    .container { max-width: 1000px; margin: auto; padding: 20px; }
+    header, footer { text-align:center; padding:10px; }
+    header h1 { margin:0; }
+    .tabs { display:flex; gap:20px; justify-content:center; margin-bottom:20px; }
+    .tab { cursor:pointer; padding:10px 20px; border-radius:5px; background:#eee; }
+    .tab.active { background:#333; color:#fff; }
+    .card { border:1px solid #ccc; border-radius:8px; padding:15px; margin-bottom:20px; }
+    textarea { width:100%; height:80px; padding:10px; }
+    .controls { margin-top:10px; display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    button { padding:8px 12px; border:none; border-radius:5px; cursor:pointer; }
+    #queryBtn { background:#333; color:#fff; }
+    #micBtn { background:#28a745; color:#fff; }
+    #stopMicBtn { background:#dc3545; color:#fff; }
+    #uploadBtn { background:#666; color:#fff; }
+    #dbSection { display:none; }
+    table { border-collapse: collapse; margin-top:10px; width:100%; }
+    th, td { border:1px solid #ccc; padding:5px; text-align:left; }
+    #micStatus { font-style:italic; color:#555; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header><h1>Speech-to-SQL (AI + RAG)</h1></header>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <div id="tabQuery" class="tab active">Query</div>
+    <div id="tabDB" class="tab">Database</div>
+  </div>
+
+  <!-- Query Section -->
+  <main id="querySection">
+    <section class="card">
+      <h2>Speak or type your question</h2>
+      <textarea id="nlquery" placeholder="e.g., Hi, list all employees in Marketing"></textarea>
+      <div class="controls">
+        <button id="queryBtn">Send Query</button>
+        <button id="micBtn">🎤 Start Mic</button>
+        <button id="stopMicBtn">⛔ Stop Mic</button>
+        <span id="micStatus"></span>
+        <input type="file" id="audioFile" accept="audio/*">
+        <button id="uploadBtn">Transcribe Audio</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Results</h2>
+      <pre id="sql"></pre>
+      <table id="resultTable"></table>
+      <canvas id="chart" style="max-width:600px;"></canvas>
+    </section>
+  </main>
+
+  <!-- Database Section -->
+  <main id="dbSection">
+    <section class="card">
+      <h2>Manage Database</h2>
+      <p>Upload a SQLite file or connect via string</p>
+      <input type="file" id="dbFile" accept=".db,.sqlite">
+      <button id="uploadDbBtn">Upload DB</button>
+      <br><br>
+      <input type="text" id="dbConn" placeholder="e.g., postgresql://user:pass@host/dbname" style="width:100%;padding:8px;">
+      <button id="connectDbBtn">Connect DB</button>
+      <p id="dbStatus"></p>
+    </section>
+  </main>
+
+  <footer>Seamless Database Management</footer>
+</div>
+
+<script>
+/* ---------- Tab switching ---------- */
+document.getElementById('tabQuery').onclick = ()=>{
+  document.getElementById('querySection').style.display='block';
+  document.getElementById('dbSection').style.display='none';
+  document.getElementById('tabQuery').classList.add('active');
+  document.getElementById('tabDB').classList.remove('active');
+};
+document.getElementById('tabDB').onclick = ()=>{
+  document.getElementById('querySection').style.display='none';
+  document.getElementById('dbSection').style.display='block';
+  document.getElementById('tabDB').classList.add('active');
+  document.getElementById('tabQuery').classList.remove('active');
+};
+
+/* ---------- Helper ---------- */
+async function postJSON(url, data) {
+  const token = localStorage.getItem('token') || '';
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json', 'Authorization': 'Bearer ' + token},
+    body: JSON.stringify(data)
+  });
+  return res.json();
+}
+
+/* ---------- Query ---------- */
+document.getElementById('queryBtn').onclick = async ()=>{
+  const q = document.getElementById('nlquery').value;
+  const r = await postJSON('/api/query_nl', {query: q});
+  document.getElementById('sql').innerText = r.sql || (r.error || 'No SQL');
+  renderResults(r.rows || [], r.cols || []);
+};
+
+/* ---------- Upload Audio ---------- */
+document.getElementById('uploadBtn').onclick = async ()=>{
+  const f = document.getElementById('audioFile').files[0];
+  if(!f) return alert('Choose file');
+  const fd = new FormData(); fd.append('file', f);
+  const token = localStorage.getItem('token') || '';
+  const res = await fetch('/api/upload_audio', {method:'POST', body: fd, headers: {'Authorization':'Bearer ' + token}});
+  const j = await res.json();
+  document.getElementById('nlquery').value = j.transcript || '';
+};
+
+/* ---------- Mic Recognition ---------- */
+let recognition;
+if ('webkitSpeechRecognition' in window) {
+  recognition = new webkitSpeechRecognition();
+  recognition.lang = 'en-US';
+  recognition.interimResults = true;
+  recognition.continuous = false;
+
+  recognition.onstart = () => {
+    document.getElementById('micStatus').innerText = "🎤 Listening...";
+  };
+  recognition.onend = () => {
+    document.getElementById('micStatus').innerText = "";
+  };
+  recognition.onresult = (e) => {
+    let text = '';
+    for (let i = e.resultIndex; i < e.results.length; ++i) {
+      text += e.results[i][0].transcript;
+    }
+    document.getElementById('nlquery').value = text;
+  };
+}
+document.getElementById('micBtn').onclick = () => {
+  if (recognition) recognition.start();
+  else alert("Speech recognition not supported in this browser");
+};
+document.getElementById('stopMicBtn').onclick = () => {
+  if (recognition) recognition.stop();
+  document.getElementById('micStatus').innerText = "⛔ Stopped.";
+  setTimeout(()=>{ document.getElementById('micStatus').innerText = ""; }, 1500);
+};
+
+/* ---------- Render Results ---------- */
+function renderResults(rows, cols){
+  const table = document.getElementById('resultTable');
+  table.innerHTML = '';
+  if(!cols || cols.length===0) return;
+  const thead = document.createElement('thead'); const trh = document.createElement('tr');
+  cols.forEach(c=>{ const th = document.createElement('th'); th.innerText=c; trh.appendChild(th);}); 
+  thead.appendChild(trh); table.appendChild(thead);
+  const tbody = document.createElement('tbody');
+  rows.forEach(r=>{ const tr = document.createElement('tr'); r.forEach(cell=>{ const td = document.createElement('td'); td.innerText = cell; tr.appendChild(td);} ); tbody.appendChild(tr);});
+  table.appendChild(tbody);
+
+  // Chart (first numeric column)
+  const nums = cols.map((c,i)=> rows.map(r=> parseFloat(r[i]) ).filter(v=>!isNaN(v)) );
+  const firstNum = nums.find(a=>a.length>0);
+  if(!firstNum) return;
+  const ctx = document.getElementById('chart').getContext('2d');
+  new Chart(ctx, {type:'bar', data: { labels: rows.map((r,i)=> i+1), datasets: [{ label: 'Series', data: firstNum, backgroundColor:'#333' }] }});
+}
+
+/* ---------- DB Management ---------- */
+// Upload DB file
+document.getElementById('uploadDbBtn').onclick = async () => {
+  const f = document.getElementById('dbFile').files[0];
+  if (!f) return alert('Choose DB file');
+  const fd = new FormData();
+  fd.append('file', f);
+  const res = await fetch('/api/upload_db', { method: 'POST', body: fd });
+  const j = await res.json();
+  document.getElementById('dbStatus').textContent = j.message || 'Uploaded';
+  await fetch('/api/rebuild_schema_index', { method: 'POST' });
+};
+// Connect DB
+document.getElementById('connectDbBtn').onclick = async () => {
+  const conn = document.getElementById('dbConn').value;
+  if (!conn) return alert('Enter connection string');
+  const fd = new FormData();
+  fd.append('conn', conn);
+  const res = await fetch('/api/connect_db', { method: 'POST', body: fd });
+  const j = await res.json();
+  document.getElementById('dbStatus').textContent = j.message || 'Connected';
+  await fetch('/api/rebuild_schema_index', { method: 'POST' });
+};
+</script>
+</body>
+</html>

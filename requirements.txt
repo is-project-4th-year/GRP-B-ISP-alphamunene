@@ -1,0 +1,15 @@
+fastapi
+uvicorn[standard]
+python-multipart
+sqlalchemy
+passlib[bcrypt]
+jose
+python-jose
+sentence-transformers
+faiss-cpu
+openai
+whisper
+pydantic
+jinja2
+aiofiles
+python-dotenv

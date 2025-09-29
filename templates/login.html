@@ -1,0 +1,9 @@
+<!doctype html><html><head><meta charset='utf-8'><title>Login</title><link rel='stylesheet' href='/static/style.css'></head>
+<body><div class='container'><h2>Login</h2><input id='user' placeholder='username'><input id='pass' placeholder='password' type='password'><button id='btn'>Login</button></div>
+<script>
+document.getElementById('btn').onclick = async ()=>{
+  const u = document.getElementById('user').value; const p = document.getElementById('pass').value;
+  const res = await fetch('/token', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body: `username=${u}&password=${p}`});
+  if(res.ok){ const j = await res.json(); localStorage.setItem('token', j.access_token); alert('Logged in'); window.location='/'; } else alert('Login failed');
+}
+</script></body></html>
