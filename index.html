@@ -1,225 +1,582 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Speech2SQL</title>
+
+  <!-- Bootstrap -->
   <link
     href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
     rel="stylesheet"
   />
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
   <style>
     body {
-      background-color: #b2e4fe;
-      color: #dbd4d4;
-      font-family: "Segoe UI", sans-serif;
-      padding-top: 80px;
-    }
-
-    /* Header */
-    .navbar {
-      background-color: #002b5c;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-    }
-    .navbar-brand {
-      color: #fff !important;
-      font-weight: 700;
-      font-size: 1.4rem;
-    }
-    .nav-link {
-      color: #f5f5f5 !important;
-      font-weight: 500;
-      margin-right: 20px;
-      transition: color 0.3s;
-    }
-    .nav-link:hover {
-      color: #ffd700 !important;
-    }
-
-    /* Wider cards */
-    .card {
-      background-color: #ffffff;
-      border: none;
-      border-radius: 18px;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
-      max-width: 1000px;
-      margin: 0 auto;
-    }
-
-    #recordBtn {
-      border-radius: 50%;
-      width: 90px;
-      height: 90px;
-      font-size: 1.5rem;
-      background-color: #dc3545;
-      border: none;
-      color: white;
-      transition: background 0.3s;
-    }
-
-    #recordBtn.recording {
-      background-color: #28a745;
-      animation: pulse 1s infinite;
-    }
-
-    @keyframes pulse {
-      0% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.5); }
-      70% { box-shadow: 0 0 0 18px rgba(40, 167, 69, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
-    }
-
-    #status {
-      font-size: 1rem;
-      color: #555;
-    }
-
-    pre {
-      color: #00a2ff;
-      background-color: #001a33 !important;
-      font-size: 1rem;
-    }
-
-    table {
+      background: #ffffff;
+      font-family: "Segoe UI", Arial, sans-serif;
+      margin: 0;
+      padding-top: 90px; /* space for fixed header */
       color: #222;
     }
 
-    h5 {
-      color: #002b5c;
-      font-weight: 600;
+    /* HEADER STYLING */
+    .navbar {
+      background: linear-gradient(90deg, #011f42 0%, #012a63 100%);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      height: 80px;
+    }
+
+    .navbar-brand {
+      color: #ffffff !important;
+      font-weight: 700;
+      font-size: 1.5rem;
+      letter-spacing: 0.5px;
+    }
+
+    .nav-link {
+      position: relative;
+      color: #f5f5f5 !important;
+      font-weight: 500;
+      margin-right: 18px;
+      transition: all 0.3s ease-in-out;
+    }
+
+    /* Underline animation */
+    .nav-link::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      bottom: -3px;
+      width: 0;
+      height: 2px;
+      background: #f1f107;
+      transition: width 0.3s ease-in-out;
+    }
+
+    .nav-link:hover {
+      color: #f1f107 !important;
+      transform: scale(1.05);
+    }
+
+    .nav-link:hover::after {
+      width: 100%;
+    }
+
+    .navbar-toggler {
+      border-color: #fff;
+    }
+
+    .navbar-toggler-icon {
+      filter: invert(100%);
+    }
+
+    .navbar-collapse {
+      background-color: #011f42;
+    }
+
+    /* BODY STYLING */
+    .container {
+      max-width: 1000px;
+      margin: auto;
+      padding: 20px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    .tab {
+      cursor: pointer;
+      padding: 10px 20px;
+      border-radius: 5px;
+      background: #eee;
+      font-weight: 500;
+      transition: 0.3s;
+    }
+
+    .tab.active {
+      background: #011f42;
+      color: #fff;
+    }
+
+    .card {
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    textarea {
+      width: 100%;
+      height: 80px;
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      resize: vertical;
+    }
+
+    .controls {
+      margin-top: 10px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    button {
+      padding: 8px 12px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #queryBtn {
+      background: #011f42;
+      color: #fff;
+    }
+
+    #micBtn {
+      background: #28a745;
+      color: #fff;
+    }
+
+    #stopMicBtn {
+      background: #dc3545;
+      color: #fff;
+    }
+
+    #uploadBtn {
+      background: #666;
+      color: #fff;
+    }
+
+    #dbSection {
+      display: none;
+    }
+
+    table {
+      border-collapse: collapse;
+      margin-top: 10px;
+      width: 100%;
+    }
+
+    th,
+    td {
+      border: 1px solid #ccc;
+      padding: 5px;
+      text-align: left;
+    }
+
+    #micStatus {
+      font-style: italic;
+      color: #555;
+    }
+
+    footer {
+      text-align: center;
+      padding: 15px;
+      font-size: 0.95rem;
+      color: #555;
+      border-top: 1px solid #ddd;
+      margin-top: 30px;
     }
   </style>
 </head>
+
 <body>
-  <!-- Header -->
+  <!-- ====== NAVBAR ====== -->
   <nav class="navbar navbar-expand-lg fixed-top">
     <div class="container-fluid px-4">
       <a class="navbar-brand" href="#">🎙️ Speech2SQL</a>
-      <div class="collapse navbar-collapse justify-content-end">
-        <ul class="navbar-nav">
-          <li class="nav-item">
-            <a class="nav-link" href="#" onclick="connectDB()">Connect to Database</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="#" onclick="visualize()">Visualize</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="#" onclick="help()">Help</a>
-          </li>
+      <button
+        class="navbar-toggler"
+        type="button"
+        data-bs-toggle="collapse"
+        data-bs-target="#navbarNav"
+      >
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+        <ul class="navbar-nav align-items-lg-center text-center">
+          <li class="nav-item"><a class="nav-link" href="#">Home</a></li>
+          <li class="nav-item"><a class="nav-link" href="#" id="navQuery">Query</a></li>
+          <li class="nav-item"><a class="nav-link" href="#" id="navDB">Database</a></li>
+          <li class="nav-item"><a class="nav-link" href="#" id="navHelp">Help</a></li>
+
         </ul>
       </div>
     </div>
   </nav>
 
-  <!-- Main Content -->
-  <div class="container text-center">
-    <h2 class="mb-4 mt-2 text-dark fw-bold">Speak your query to your database</h2>
-    <p class="lead text-dark">Click the mircrophone to record</p>
-
-    <div class="card p-5 mb-4">
-      <div class="d-flex flex-column align-items-center">
-        <button id="recordBtn">🎤</button>
-        <p id="status" class="mt-3">Idle</p>
-      </div>
-
-      <div class="mt-4 text-start">
-        <h5>🗣️ Transcribed Text</h5>
-        <pre id="transcript" class="p-3 rounded" style="min-height: 90px;"></pre>
-      </div>
+  <!-- ====== MAIN CONTENT ====== -->
+  <div class="container">
+    <!-- Tabs -->
+    <div class="tabs">
+      <div id="tabQuery" class="tab active">Query</div>
+      <div id="tabDB" class="tab">Database</div>
     </div>
 
-    <div class="card p-5">
-      <h5>📊 Query Result</h5>
-      <div id="resultContainer" class="table-responsive mt-3"></div>
-    </div>
-  </div>
+    <!-- Query Section -->
+    <main id="querySection">
+      <section class="card">
+        <h2>Speak or Type Your Question</h2>
+        <textarea id="nlquery" placeholder="e.g., List all employees in Marketing"></textarea>
+        <div class="controls">
+          <button id="queryBtn">Send Query</button>
+          <button id="micBtn">🎤 Start Mic</button>
+          <button id="stopMicBtn">⛔ Stop Mic</button>
+          <span id="micStatus"></span>
+          <input type="file" id="audioFile" accept="audio/*">
+          <button id="uploadBtn">Transcribe Audio</button>
+        </div>
+      </section>
 
+      <section class="card">
+        <h2>Results</h2>
+        <pre id="sql"></pre>
+        <table id="resultTable"></table>
+        <canvas id="chart" style="max-width:600px;"></canvas>
+      </section>
+    </main>
+
+  <!-- ====== DATABASE SECTION ====== -->
+<main id="dbSection">
+  <section class="card text-center">
+    <h2>🗄️ Database Operations</h2>
+
+    <!-- Connect Button -->
+    <button id="showDbOptionsBtn" class="btn btn-primary mb-3">
+      🔗 Connect Database
+    </button>
+     
+    
+    <!-- Hidden Database Options -->
+    <div id="dbOptions" style="display: none;">
+      <p>Upload a SQLite file or connect via connection string:</p>
+
+      <div class="mb-3">
+        <input type="file" id="dbFile" accept=".db,.sqlite" class="form-control">
+      </div>
+
+      <button id="uploadDbBtn" class="btn btn-primary mb-2 w-100">📤 Upload DB</button>
+
+      <div class="mt-3">
+        <input
+          type="text"
+          id="dbConn"
+          placeholder="e.g., postgresql://user:pass@host/dbname"
+          class="form-control mb-2"
+        >
+        <button id="connectDbBtn" class="btn btn-primary w-100">🔌 Connect DB</button>
+      </div>
+
+      <p id="dbStatus" class="mt-3 text-muted"></p>
+    </div>
+    <button id="showDbOptionsBtn" class="btn btn-primary mb-3">
+      📊 View Tables
+    </button>
+    <button id="showDbOptionsBtn" class="btn btn-primary mb-3">
+      Reload Database
+    </button>
+  </section>
+</main>
+
+<!-- ====== HELP SECTION ====== -->
+
+  <main id="helpSection" style="display:none;">
+  <section class="card text-center">
+    <h2>🆘 Help & Support</h2>
+
+    <!-- Search bar -->
+    <div class="input-group mb-3 mt-3">
+      <span class="input-group-text">🔍</span>
+      <input
+        type="text"
+        id="helpSearch"
+        class="form-control"
+        placeholder="Search help topics..."
+      />
+    </div>
+
+    <!-- Button to show help options -->
+    <button id="showHelpOptionsBtn" class="btn btn-primary mb-3">
+      📚 Show Help Topics
+    </button>
+
+    <!-- Hidden help topics -->
+    <div id="helpOptions" style="display:none; text-align:left;">
+      <p>Select a topic below or search above:</p>
+
+      <!-- Accordion for help topics -->
+      <div class="accordion" id="helpAccordion">
+
+        <!-- Query Help -->
+        <div class="accordion-item">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#helpQuery">
+              💬 How to Use the Query Section
+            </button>
+          </h2>
+          <div id="helpQuery" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+            <div class="accordion-body">
+              Type or speak your question into the text area, then click <b>Send Query</b>.
+              The system will automatically convert it into an SQL statement and display the results.
+            </div>
+          </div>
+        </div>
+
+        <!-- Database Help -->
+        <div class="accordion-item">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#helpDB">
+              🗄️ Managing the Database
+            </button>
+          </h2>
+          <div id="helpDB" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+            <div class="accordion-body">
+              Use <b>Connect Database</b> to upload a SQLite file or connect with a database string.
+              You can then view or reload tables to explore data in your database.
+            </div>
+          </div>
+        </div>
+
+        <!-- Voice Help -->
+        <div class="accordion-item">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#helpVoice">
+              🎤 Using Voice Commands
+            </button>
+          </h2>
+          <div id="helpVoice" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+            <div class="accordion-body">
+              Click <b>Start Mic</b> to capture your voice and automatically convert it to text.
+              Use <b>Stop Mic</b> when you finish speaking.
+            </div>
+          </div>
+        </div>
+
+        <!-- Troubleshooting Help -->
+        <div class="accordion-item">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#helpTrouble">
+              ⚙️ Troubleshooting Common Issues
+            </button>
+          </h2>
+          <div id="helpTrouble" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+            <div class="accordion-body">
+              <ul>
+                <li>🎙️ Check your microphone permissions if voice input doesn’t work.</li>
+                <li>🗄️ Make sure your database file is valid and uploaded correctly.</li>
+                <li>🌐 Ensure the backend server is running before sending queries.</li>
+                <li>🔄 Try refreshing the page to reload any lost connections.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ====== SCRIPT ====== -->
+<script>
+  // Navbar Navigation
+document.getElementById("navHelp").onclick = () => showSection("helpSection");
+
+// Helper function to toggle visible sections
+function showSection(id) {
+  ["querySection", "dbSection", "helpSection"].forEach(sec => {
+    document.getElementById(sec).style.display = (sec === id) ? "block" : "none";
+  });
+}
+
+  // Show/Hide Database Options
+  document.getElementById("showDbOptionsBtn").onclick = function () {
+    const dbOptions = document.getElementById("dbOptions");
+    dbOptions.style.display =
+      dbOptions.style.display === "none" ? "block" : "none";
+  };
+ 
+
+</script>
+<script>
+   // ===== HELP SECTION SCRIPT =====
+
+// Show/Hide Help Options
+document.getElementById("showHelpOptionsBtn").onclick = function () {
+  const helpOptions = document.getElementById("helpOptions");
+  helpOptions.style.display = 
+  helpOptions.style.display === "none" ? "block" : "none";
+};
+
+// Display selected help content
+document.getElementById("helpViewBtn").onclick = function () {
+  const topic = document.getElementById("helpDropdown").value;
+  const content = document.getElementById("helpContent");
+  let text = "";
+
+  switch (topic) {
+    case "query":
+      text = "<b>Query Section:</b> Type or speak your question, then click <b>Send Query</b> to generate SQL automatically.";
+      break;
+    case "database":
+      text = "<b>Database Section:</b> Upload or connect to your database, then view or reload tables.";
+      break;
+    case "voice":
+      text = "<b>Voice Commands:</b> Click <b>Start Mic</b> to capture speech and <b>Stop Mic</b> to end recording.";
+      break;
+    case "troubleshoot":
+      text = "<b>Troubleshooting:</b> Ensure your microphone is enabled, database file is valid, and server is running.";
+      break;
+    default:
+      text = "Please select a help topic.";
+  }
+
+  content.innerHTML = `<div class='alert alert-info'>${text}</div>`;
+};
+</script>
+
+  <!-- ====== SCRIPT SECTION ====== -->
   <script>
-    const recordBtn = document.getElementById('recordBtn');
-    const statusEl = document.getElementById('status');
-    const transcriptEl = document.getElementById('transcript');
-    const resultContainer = document.getElementById('resultContainer');
+  /* ---------- Navbar Links ---------- */
+  document.getElementById('navQuery').onclick = () => {
+    document.getElementById('tabQuery').click();
+  };
+  document.getElementById('navDB').onclick = () => {
+    document.getElementById('tabDB').click();
+  };
 
-    let mediaRecorder;
-    let audioChunks = [];
+  /* ---------- Tabs ---------- */
+  document.getElementById('tabQuery').onclick = () => {
+    document.getElementById('querySection').style.display = 'block';
+    document.getElementById('dbSection').style.display = 'none';
+    document.getElementById('tabQuery').classList.add('active');
+    document.getElementById('tabDB').classList.remove('active');
+  };
 
-    function setStatus(text) {
-      statusEl.textContent = text;
-    }
+  document.getElementById('tabDB').onclick = () => {
+    document.getElementById('querySection').style.display = 'none';
+    document.getElementById('dbSection').style.display = 'block';
+    document.getElementById('tabDB').classList.add('active');
+    document.getElementById('tabQuery').classList.remove('active');
+  };
 
-    // Navbar actions (placeholders)
-    function connectDB() {
-      alert("Database connection setup coming soon.");
-    }
-
-    function visualize() {
-      alert("Visualization dashboard under construction.");
-    }
-
-    function help() {
-      alert("Speak queries like 'Show all employees in Nairobi' to see results.");
-    }
-
-    // Audio capture + transcription + MySQL querying
-    async function startRecording() {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorder = new MediaRecorder(stream);
-      audioChunks = [];
-
-      mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-      mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-        const formData = new FormData();
-        formData.append('audio', audioBlob, 'speech.webm');
-
-        setStatus('Transcribing...');
-        const res = await fetch('/api/transcribe', { method: 'POST', body: formData });
-        const data = await res.json();
-        transcriptEl.textContent = data.text;
-
-        setStatus('Converting to SQL...');
-        const res2 = await fetch('/api/query', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: data.text })
-        });
-        const payload = await res2.json();
-
-        if (payload.sql) transcriptEl.textContent += `\n\n💾 SQL: ${payload.sql}`;
-
-        if (payload.result && Array.isArray(payload.result) && payload.result.length > 0) {
-          const headers = Object.keys(payload.result[0]);
-          let table = '<table class="table table-striped table-hover mt-3"><thead><tr>';
-          headers.forEach(h => table += `<th>${h}</th>`);
-          table += '</tr></thead><tbody>';
-          payload.result.forEach(row => {
-            table += '<tr>';
-            headers.forEach(h => table += `<td>${row[h]}</td>`);
-            table += '</tr>';
-          });
-          table += '</tbody></table>';
-          resultContainer.innerHTML = table;
-        } else {
-          resultContainer.innerHTML = '<p class="text-muted mt-3">No results found.</p>';
-        }
-
-        setStatus('Idle');
-      };
-
-      mediaRecorder.start();
-      recordBtn.classList.add('recording');
-      setStatus('Recording...');
-    }
-
-    function stopRecording() {
-      mediaRecorder.stop();
-      recordBtn.classList.remove('recording');
-      setStatus('Processing...');
-    }
-
-    recordBtn.addEventListener('click', () => {
-      if (recordBtn.classList.contains('recording')) stopRecording();
-      else startRecording();
+  /* ---------- POST JSON Helper ---------- */
+  async function postJSON(url, data) {
+    const token = localStorage.getItem('token') || '';
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json', 'Authorization': 'Bearer ' + token},
+      body: JSON.stringify(data)
     });
+    return res.json();
+  }
+
+  /* ---------- Query ---------- */
+  document.getElementById('queryBtn').onclick = async () => {
+    const q = document.getElementById('nlquery').value;
+    const r = await postJSON('/api/query_nl', {query: q});
+    document.getElementById('sql').innerText = r.sql || (r.error || 'No SQL');
+    renderResults(r.rows || [], r.cols || []);
+  };
+
+  /* ---------- Upload Audio ---------- */
+  document.getElementById('uploadBtn').onclick = async () => {
+    const f = document.getElementById('audioFile').files[0];
+    if(!f) return alert('Choose file');
+    const fd = new FormData(); fd.append('file', f);
+    const token = localStorage.getItem('token') || '';
+    const res = await fetch('/api/upload_audio', {method:'POST', body: fd, headers:{'Authorization':'Bearer ' + token}});
+    const j = await res.json();
+    document.getElementById('nlquery').value = j.transcript || '';
+  };
+
+  /* ---------- Speech Recognition ---------- */
+  let recognition;
+  if ('webkitSpeechRecognition' in window) {
+    recognition = new webkitSpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.interimResults = true;
+    recognition.continuous = false;
+
+    recognition.onstart = () => { document.getElementById('micStatus').innerText = "🎤 Listening..."; };
+    recognition.onend = () => { document.getElementById('micStatus').innerText = ""; };
+    recognition.onresult = (e) => {
+      let text = '';
+      for (let i = e.resultIndex; i < e.results.length; ++i)
+        text += e.results[i][0].transcript;
+      document.getElementById('nlquery').value = text;
+    };
+  }
+
+  document.getElementById('micBtn').onclick = () => {
+    if (recognition) recognition.start();
+    else alert("Speech recognition not supported in this browser");
+  };
+
+  document.getElementById('stopMicBtn').onclick = () => {
+    if (recognition) recognition.stop();
+    document.getElementById('micStatus').innerText = "⛔ Stopped.";
+    setTimeout(() => { document.getElementById('micStatus').innerText = ""; }, 1500);
+  };
+
+  /* ---------- Render Results ---------- */
+  function renderResults(rows, cols) {
+    const table = document.getElementById('resultTable');
+    table.innerHTML = '';
+    if(!cols || cols.length === 0) return;
+    const thead = document.createElement('thead');
+    const trh = document.createElement('tr');
+    cols.forEach(c => { const th = document.createElement('th'); th.innerText = c; trh.appendChild(th); });
+    thead.appendChild(trh);
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+    rows.forEach(r => {
+      const tr = document.createElement('tr');
+      r.forEach(cell => { const td = document.createElement('td'); td.innerText = cell; tr.appendChild(td); });
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+
+    // Chart
+    const nums = cols.map((c,i)=> rows.map(r=> parseFloat(r[i])).filter(v=>!isNaN(v)) );
+    const firstNum = nums.find(a=>a.length>0);
+    if(!firstNum) return;
+    const ctx = document.getElementById('chart').getContext('2d');
+    new Chart(ctx, {type:'bar', data:{labels: rows.map((r,i)=> i+1), datasets:[{label:'Series', data:firstNum, backgroundColor:'#011f42'}]}});
+  }
+
+  /* ---------- DB Management ---------- */
+  document.getElementById('uploadDbBtn').onclick = async () => {
+    const f = document.getElementById('dbFile').files[0];
+    if (!f) return alert('Choose DB file');
+    const fd = new FormData();
+    fd.append('file', f);
+    const res = await fetch('/api/upload_db', { method: 'POST', body: fd });
+    const j = await res.json();
+    document.getElementById('dbStatus').textContent = j.message || 'Uploaded';
+    await fetch('/api/rebuild_schema_index', { method: 'POST' });
+  };
+
+  document.getElementById('connectDbBtn').onclick = async () => {
+    const conn = document.getElementById('dbConn').value;
+    if (!conn) return alert('Enter connection string');
+    const fd = new FormData();
+    fd.append('conn', conn);
+    const res = await fetch('/api/connect_db', { method: 'POST', body: fd });
+    const j = await res.json();
+    document.getElementById('dbStatus').textContent = j.message || 'Connected';
+    await fetch('/api/rebuild_schema_index', { method: 'POST' });
+  };
   </script>
 </body>
 </html>
